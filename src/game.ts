@@ -42,14 +42,14 @@ class Player extends GameObject {
 
   constructor(x: number, y: number) {
     super(x, y, 20, 'blue');
-    this.speed = 1.5;
+    this.speed = 3;
     this.level = 1;
     this.shootTimer = 0;
     this.attackSpeed = 60; // Frames between shots (lower is faster)
     this.attackPower = 1;
     this.xp = 0;
-    this.xpToLevelUp = 10;
-    this.collectRadius = 30;
+    this.xpToLevelUp = 5;
+    this.collectRadius = 100;
   }
 
   update() {
@@ -72,7 +72,7 @@ class Player extends GameObject {
           new Bullet(
             this.x + this.size / 2,
             this.y + this.size / 2,
-            1 + this.level,
+            5 + this.level,
             'red',
             nearestEnemy,
             this.attackPower
@@ -92,9 +92,8 @@ class Player extends GameObject {
     this.level++;
     this.xp = 0;
     this.xpToLevelUp += 5;
-    this.attackSpeed = Math.max(10, this.attackSpeed - 3); // Increase attack speed
+    this.attackSpeed = Math.max(10, this.attackSpeed - 5); // Increase attack speed
     this.attackPower += 1; // Increase attack power
-    this.collectRadius += 3;
     console.log(`Level Up! Level: ${this.level}`);
   }
 
@@ -115,8 +114,8 @@ class Player extends GameObject {
   }
 
   distanceTo(obj: GameObject): number {
-    const dx = obj.x - this.x;
-    const dy = obj.y - this.y;
+    const dx = (obj.x + obj.size / 2) - (this.x + this.size / 2);
+    const dy = (obj.y + obj.size / 2) - (this.y + this.size / 2);
     return Math.hypot(dx, dy);
   }
 
@@ -141,8 +140,8 @@ class Enemy extends GameObject {
   }
 
   update() {
-    const dx = player.x - this.x;
-    const dy = player.y - this.y;
+    const dx = (player.x + player.size / 2) - (this.x + this.size / 2);
+    const dy = (player.y + player.size / 2) - (this.y + this.size / 2);
     const dist = Math.hypot(dx, dy);
     // Move towards player
     this.x += (dx / dist) * this.speed;
@@ -171,8 +170,14 @@ class Bullet extends GameObject {
 
   update() {
     if (this.target) {
-      const dx = this.target.x - this.x;
-      const dy = this.target.y - this.y;
+      // Check if the target still exists in the enemies array
+      if (!enemies.includes(this.target)) {
+        this.remove();
+        return;
+      }
+
+      const dx = (this.target.x + this.target.size / 2) - (this.x + this.size / 2);
+      const dy = (this.target.y + this.target.size / 2) - (this.y + this.size / 2);
       const dist = Math.hypot(dx, dy);
 
       if (dist > 0) {
@@ -181,9 +186,23 @@ class Bullet extends GameObject {
       }
     } else {
       // No target, remove bullet
-      const index = bullets.indexOf(this);
-      if (index > -1) bullets.splice(index, 1);
+      this.remove();
     }
+
+    // Remove bullet if it goes off-screen
+    if (
+      this.x < -this.size ||
+      this.x > canvas.width + this.size ||
+      this.y < -this.size ||
+      this.y > canvas.height + this.size
+    ) {
+      this.remove();
+    }
+  }
+
+  remove() {
+    const index = bullets.indexOf(this);
+    if (index > -1) bullets.splice(index, 1);
   }
 }
 
@@ -197,8 +216,8 @@ class Gem extends GameObject {
 
   update() {
     // Move towards player if within collect radius
-    const dx = player.x - this.x;
-    const dy = player.y - this.y;
+    const dx = (player.x + player.size / 2) - (this.x + this.size / 2);
+    const dy = (player.y + player.size / 2) - (this.y + this.size / 2);
     const dist = Math.hypot(dx, dy);
 
     if (dist < player.collectRadius) {
@@ -213,12 +232,13 @@ let enemies: Enemy[] = [];
 let bullets: Bullet[] = [];
 let gems: Gem[] = [];
 
-let enemySpawnInterval = 1200; // Initial interval in milliseconds
+let enemySpawnInterval = 2000; // Initial interval in milliseconds
 let timeSinceLastSpawn = 0;
 
+// Spawn enemies at random edges
 function spawnEnemy() {
   const edge = Math.floor(Math.random() * 4);
-  let x: number = 0, y: number = 0;
+  let x: number, y: number;
 
   switch (edge) {
     case 0: // Top
@@ -259,19 +279,9 @@ function update(timestamp: number) {
   player.update();
   player.draw();
 
-  bullets.forEach((bullet, index) => {
+  bullets.forEach((bullet) => {
     bullet.update();
     bullet.draw();
-
-    // Remove off-screen bullets
-    if (
-      bullet.x < -bullet.size ||
-      bullet.x > canvas.width + bullet.size ||
-      bullet.y < -bullet.size ||
-      bullet.y > canvas.height + bullet.size
-    ) {
-      bullets.splice(index, 1);
-    }
   });
 
   enemies.forEach((enemy, eIndex) => {
@@ -284,12 +294,14 @@ function update(timestamp: number) {
       resetGame();
       return;
     }
+  });
 
-    // Collision with bullets
-    bullets.forEach((bullet, bIndex) => {
+  // Handle bullet-enemy collisions separately to prevent modifying the array during iteration
+  bullets.forEach((bullet, bIndex) => {
+    enemies.forEach((enemy, eIndex) => {
       if (isColliding(bullet, enemy)) {
         enemy.health -= bullet.damage;
-        bullets.splice(bIndex, 1);
+        bullet.remove();
 
         if (enemy.health <= 0) {
           enemies.splice(eIndex, 1);
