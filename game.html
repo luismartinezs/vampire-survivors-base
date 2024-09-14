@@ -1,17 +1,115 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Simple Vampire Survivors Clone</title>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enhanced Canvas Game</title>
     <style>
-      canvas {
-        background-color: #000;
-        display: block;
-        margin: 0 auto;
-      }
+        /* Basic styling for the canvas */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #gameCanvas {
+          box-shadow: 0 0 10px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        /* Overlay styles */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            z-index: 10;
+            display: none; /* Hidden by default */
+        }
+
+        .overlay button {
+            padding: 10px 20px;
+            margin: 15px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #28a745;
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        .overlay button:hover {
+            background-color: #218838;
+        }
+
+        /* XP Bar Styles */
+        #xpBarContainer {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            background-color: gray;
+            border: 2px solid white;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #xpBar {
+            width: 0%;
+            height: 20px;
+            background-color: lime;
+        }
+
+        /* Level Display */
+        #levelDisplay {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 20px;
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
+    <!-- Game Canvas -->
     <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <!-- XP Bar -->
+    <div id="xpBarContainer">
+        <div id="xpBar"></div>
+    </div>
+    <div id="levelDisplay">Level: 1</div>
+
+    <!-- Game Over Overlay -->
+    <div id="gameOverOverlay" class="overlay">
+        <div>Game Over!</div>
+        <button id="replayButton">Replay</button>
+    </div>
+
+    <!-- Level Up Overlay -->
+    <div id="levelUpOverlay" class="overlay">
+        <div>Level Up! Choose a stat to increase:</div>
+        <button id="upgradeAttackSpeed">Attack Speed</button>
+        <button id="upgradeAttackPower">Attack Power</button>
+        <button id="upgradeCollectRadius">Collect Radius</button>
+    </div>
+
+    <!-- Script -->
     <script src="dist/game.js"></script>
-  </body>
+</body>
 </html>
