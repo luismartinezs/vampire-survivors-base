@@ -195,12 +195,12 @@ class Enemy extends GameObject {
       case EnemyType.Boss:
         this.speed = 0.2;
         this.health = 30;
-        this.color = 'blue';
+        this.color = 'red';
         break;
       case EnemyType.Shooter:
         this.speed = 0.8;
         this.health = 8;
-        this.color = 'red';
+        this.color = 'blue';
         break;
       default:
         this.speed = 0.8;

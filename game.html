@@ -83,11 +83,77 @@
             font-family: Arial, sans-serif;
             font-size: 20px;
         }
+
+        /* New styles for the game container and instructions panel */
+        .game-container {
+            display: flex;
+            align-items: center;
+        }
+
+        #instructionsPanel {
+            width: 140px;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            margin-left: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            display:flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #instructionsPanel h3 {
+            margin-top: 0;
+            color: #9c9c9c;
+            font-weight: normal;
+            font-size: 16px;
+        }
+
+        .key-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            /* margin-top: 10px; */
+        }
+
+        .key {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #8a8888;
+            color: #d4d4d4;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        #key-w { grid-column: 2; }
+        #key-a { grid-column: 1; grid-row: 2; }
+        #key-s { grid-column: 2; grid-row: 2; }
+        #key-d { grid-column: 3; grid-row: 2; }
     </style>
 </head>
 <body>
-    <!-- Game Canvas -->
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="game-container">
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <!-- Instructions Panel -->
+        <div id="instructionsPanel">
+            <!-- <h3>Movement</h3> -->
+            <div class="key-container">
+                <div id="key-w" class="key">W</div>
+                <div id="key-a" class="key">A</div>
+                <div id="key-s" class="key">S</div>
+                <div id="key-d" class="key">D</div>
+            </div>
+        </div>
+    </div>
 
     <!-- XP Bar -->
     <div id="xpBarContainer">
