@@ -34,12 +34,22 @@ class Player extends GameObject {
   speed: number;
   level: number;
   shootTimer: number;
+  attackSpeed: number;
+  attackPower: number;
+  xp: number;
+  xpToLevelUp: number;
+  collectRadius: number;
 
   constructor(x: number, y: number) {
     super(x, y, 20, 'blue');
-    this.speed = 1.5;
+    this.speed = 3;
     this.level = 1;
     this.shootTimer = 0;
+    this.attackSpeed = 60; // Frames between shots (lower is faster)
+    this.attackPower = 1;
+    this.xp = 0;
+    this.xpToLevelUp = 5;
+    this.collectRadius = 100;
   }
 
   update() {
@@ -55,7 +65,7 @@ class Player extends GameObject {
 
     // Auto-shoot
     this.shootTimer++;
-    if (this.shootTimer > 100) {
+    if (this.shootTimer >= this.attackSpeed) {
       const nearestEnemy = this.findNearestEnemy();
       if (nearestEnemy) {
         bullets.push(
@@ -64,12 +74,27 @@ class Player extends GameObject {
             this.y + this.size / 2,
             5 + this.level,
             'red',
-            nearestEnemy
+            nearestEnemy,
+            this.attackPower
           )
         );
+        this.shootTimer = 0;
       }
-      this.shootTimer = 0;
     }
+
+    // Level Up
+    if (this.xp >= this.xpToLevelUp) {
+      this.levelUp();
+    }
+  }
+
+  levelUp() {
+    this.level++;
+    this.xp = 0;
+    this.xpToLevelUp += 5;
+    this.attackSpeed = Math.max(10, this.attackSpeed - 5); // Increase attack speed
+    this.attackPower += 1; // Increase attack power
+    console.log(`Level Up! Level: ${this.level}`);
   }
 
   findNearestEnemy(): Enemy | null {
@@ -77,7 +102,7 @@ class Player extends GameObject {
     let nearestEnemy = enemies[0];
     let minDist = this.distanceTo(nearestEnemy);
 
-    for (const enemy of enemies) {
+    for (let enemy of enemies) {
       const dist = this.distanceTo(enemy);
       if (dist < minDist) {
         nearestEnemy = enemy;
@@ -93,21 +118,32 @@ class Player extends GameObject {
     const dy = obj.y - this.y;
     return Math.hypot(dx, dy);
   }
+
+  draw() {
+    super.draw();
+    // Draw collection radius
+    ctx.beginPath();
+    ctx.arc(this.x + this.size / 2, this.y + this.size / 2, this.collectRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0, 0, 255, 0.5)';
+    ctx.stroke();
+  }
 }
 
 class Enemy extends GameObject {
   speed: number;
+  health: number;
 
   constructor(x: number, y: number) {
     super(x, y, 20, 'green');
     this.speed = 1;
+    this.health = 3; // Enemy health
   }
 
   update() {
-    // Move towards player
     const dx = player.x - this.x;
     const dy = player.y - this.y;
     const dist = Math.hypot(dx, dy);
+    // Move towards player
     this.x += (dx / dist) * this.speed;
     this.y += (dy / dist) * this.speed;
   }
@@ -116,22 +152,24 @@ class Enemy extends GameObject {
 class Bullet extends GameObject {
   speed: number;
   target: Enemy | null;
+  damage: number;
 
   constructor(
     x: number,
     y: number,
     speed: number,
     color: string,
-    target: Enemy | null
+    target: Enemy | null,
+    damage: number
   ) {
     super(x, y, 5, color);
     this.speed = speed;
     this.target = target;
+    this.damage = damage;
   }
 
   update() {
     if (this.target) {
-      // Move towards target enemy
       const dx = this.target.x - this.x;
       const dy = this.target.y - this.y;
       const dist = Math.hypot(dx, dy);
@@ -141,15 +179,31 @@ class Bullet extends GameObject {
         this.y += (dy / dist) * this.speed;
       }
     } else {
-      // No target, move upwards
-      this.y -= this.speed;
+      // No target, remove bullet
+      const index = bullets.indexOf(this);
+      if (index > -1) bullets.splice(index, 1);
     }
   }
 }
 
 class Gem extends GameObject {
+  speed: number;
+
   constructor(x: number, y: number) {
     super(x, y, 10, 'yellow');
+    this.speed = 2;
+  }
+
+  update() {
+    // Move towards player if within collect radius
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist < player.collectRadius) {
+      this.x += (dx / dist) * this.speed;
+      this.y += (dy / dist) * this.speed;
+    }
   }
 }
 
@@ -158,25 +212,27 @@ let enemies: Enemy[] = [];
 let bullets: Bullet[] = [];
 let gems: Gem[] = [];
 
+let enemySpawnInterval = 2000; // Initial interval in milliseconds
+let timeSinceLastSpawn = 0;
+
 function spawnEnemy() {
   const edge = Math.floor(Math.random() * 4);
-  let x: number = 0, y: number = 0;
+  let x: number, y: number;
 
-  // Spawn enemies at random edges
   switch (edge) {
-    case 0: // Top edge
+    case 0: // Top
       x = Math.random() * canvas.width;
       y = -20;
       break;
-    case 1: // Right edge
+    case 1: // Right
       x = canvas.width + 20;
       y = Math.random() * canvas.height;
       break;
-    case 2: // Bottom edge
+    case 2: // Bottom
       x = Math.random() * canvas.width;
       y = canvas.height + 20;
       break;
-    case 3: // Left edge
+    case 3: // Left
       x = -20;
       y = Math.random() * canvas.height;
       break;
@@ -189,7 +245,14 @@ function spawnGem(x: number, y: number) {
   gems.push(new Gem(x, y));
 }
 
-function update() {
+let lastTimestamp = 0;
+
+function update(timestamp: number) {
+  const delta = timestamp - lastTimestamp;
+  lastTimestamp = timestamp;
+
+  timeSinceLastSpawn += delta;
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   player.update();
@@ -199,12 +262,12 @@ function update() {
     bullet.update();
     bullet.draw();
 
-    // Remove bullets that go off-screen
+    // Remove off-screen bullets
     if (
-      bullet.x + bullet.size < 0 ||
-      bullet.x > canvas.width ||
-      bullet.y + bullet.size < 0 ||
-      bullet.y > canvas.height
+      bullet.x < -bullet.size ||
+      bullet.x > canvas.width + bullet.size ||
+      bullet.y < -bullet.size ||
+      bullet.y > canvas.height + bullet.size
     ) {
       bullets.splice(index, 1);
     }
@@ -214,37 +277,48 @@ function update() {
     enemy.update();
     enemy.draw();
 
-    // Check collision with player
+    // Collision with player
     if (isColliding(player, enemy)) {
       alert('Game Over!');
       resetGame();
+      return;
     }
 
-    // Check collision with bullets
+    // Collision with bullets
     bullets.forEach((bullet, bIndex) => {
       if (isColliding(bullet, enemy)) {
-        enemies.splice(eIndex, 1);
+        enemy.health -= bullet.damage;
         bullets.splice(bIndex, 1);
-        spawnGem(enemy.x, enemy.y);
+
+        if (enemy.health <= 0) {
+          enemies.splice(eIndex, 1);
+          spawnGem(enemy.x, enemy.y);
+        }
       }
     });
   });
 
   gems.forEach((gem, gIndex) => {
+    gem.update();
     gem.draw();
 
-    // Check collision with player
+    // Collision with player
     if (isColliding(player, gem)) {
       gems.splice(gIndex, 1);
-      player.level++;
-      console.log('Level Up! Level:', player.level);
+      player.xp += 1;
     }
   });
 
-  // Randomly spawn enemies
-  if (Math.random() < 0.01) {
+  // Spawn enemies based on interval
+  if (timeSinceLastSpawn >= enemySpawnInterval) {
     spawnEnemy();
+    timeSinceLastSpawn = 0;
+
+    // Decrease interval to increase spawn rate over time
+    enemySpawnInterval = Math.max(500, enemySpawnInterval - 10);
   }
+
+  drawXPBar();
 
   requestAnimationFrame(update);
 }
@@ -258,11 +332,38 @@ function isColliding(a: GameObject, b: GameObject): boolean {
   );
 }
 
+function drawXPBar() {
+  const barWidth = canvas.width - 20;
+  const barHeight = 20;
+  const x = 10;
+  const y = 10;
+
+  // Background
+  ctx.fillStyle = 'gray';
+  ctx.fillRect(x, y, barWidth, barHeight);
+
+  // Fill
+  const fillWidth = (player.xp / player.xpToLevelUp) * barWidth;
+  ctx.fillStyle = 'lime';
+  ctx.fillRect(x, y, fillWidth, barHeight);
+
+  // Border
+  ctx.strokeStyle = 'white';
+  ctx.strokeRect(x, y, barWidth, barHeight);
+
+  // Level text
+  ctx.fillStyle = 'white';
+  ctx.font = '16px Arial';
+  ctx.fillText(`Level: ${player.level}`, x + 5, y + 15);
+}
+
 function resetGame() {
+  player = new Player(canvas.width / 2, canvas.height / 2);
   enemies = [];
   bullets = [];
   gems = [];
-  player = new Player(canvas.width / 2, canvas.height / 2);
+  enemySpawnInterval = 2000;
+  timeSinceLastSpawn = 0;
 }
 
-update();
+requestAnimationFrame(update);
