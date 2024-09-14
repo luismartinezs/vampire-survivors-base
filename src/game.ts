@@ -10,10 +10,11 @@ const upgradeAttackPowerButton = document.getElementById('upgradeAttackPower') a
 const upgradeCollectRadiusButton = document.getElementById('upgradeCollectRadius') as HTMLButtonElement;
 const xpBar = document.getElementById('xpBar') as HTMLDivElement;
 const levelDisplay = document.getElementById('levelDisplay') as HTMLDivElement;
+const scoreDisplay = document.getElementById('scoreDisplay') as HTMLDivElement; // New score display
 
 let keys: { [key: string]: boolean } = {};
 let gamePaused = false;
-let score = 0;
+let score = 0; // Initialize score
 
 // Event listeners for keyboard input
 window.addEventListener('keydown', (e) => {
@@ -56,15 +57,15 @@ class Player extends GameObject {
   collectRadius: number;
 
   constructor(x: number, y: number) {
-    super(x, y, 20, 'cyan'); // Changed to cyan for better visibility
-    this.speed = 4; // Moderate speed for responsive movement
+    super(x, y, 20, 'cyan'); // Player color for visibility
+    this.speed = 1.5; // Moderate speed for responsive movement
     this.level = 1;
     this.shootTimer = 0;
-    this.attackSpeed = 60; // Faster shooting rate
+    this.attackSpeed = 70; // Faster shooting rate
     this.attackPower = 1;
     this.xp = 0;
     this.xpToLevelUp = 10; // XP required per level
-    this.collectRadius = 100;
+    this.collectRadius = 30;
   }
 
   update() {
@@ -89,7 +90,7 @@ class Player extends GameObject {
           new Bullet(
             this.x + this.size / 2,
             this.y + this.size / 2,
-            10 + this.level, // Increased bullet speed for visibility
+            1 + this.level, // Increased bullet speed for visibility
             'red',
             nearestEnemy,
             1 + Math.floor(this.level / 2) // Scaled damage
@@ -151,7 +152,7 @@ class Player extends GameObject {
     // Display Player Coordinates (for debugging)
     ctx.fillStyle = 'white';
     ctx.font = '12px Arial';
-    ctx.fillText(`(${Math.round(this.x)}, ${Math.round(this.y)})`, this.x, this.y - 5);
+    // ctx.fillText(`(${Math.round(this.x)}, ${Math.round(this.y)})`, this.x, this.y - 5);
   }
 }
 
@@ -160,8 +161,17 @@ enum EnemyType {
   Normal,
   Fast,
   Tank,
-  Shooter
+  Shooter,
+  Boss
 }
+
+const enemySpawnChances: { [key in EnemyType]: number } = {
+  [EnemyType.Normal]: 0.6,
+  [EnemyType.Fast]: 0.2,
+  [EnemyType.Tank]: 0.1,
+  [EnemyType.Shooter]: 0.08,
+  [EnemyType.Boss]: 0.02
+};
 
 class Enemy extends GameObject {
   speed: number;
@@ -169,28 +179,32 @@ class Enemy extends GameObject {
   type: EnemyType;
 
   constructor(x: number, y: number, type: EnemyType = EnemyType.Normal) {
-    super(x, y, 20, 'green'); // Default to green; can change based on type
+    super(x, y, 20, 'green'); // Default color
     this.type = type;
     switch (this.type) {
       case EnemyType.Fast:
-        this.speed = 2.5;
+        this.speed = 1.5;
         this.health = 1;
         this.color = 'orange';
         break;
       case EnemyType.Tank:
-        this.speed = 1;
-        this.health = 5;
+        this.speed = 0.5;
+        this.health = 15;
         this.color = 'purple';
         break;
+      case EnemyType.Boss:
+        this.speed = 0.2;
+        this.health = 30;
+        this.color = 'blue';
+        break;
       case EnemyType.Shooter:
-        this.speed = 1.5;
-        this.health = 2;
+        this.speed = 0.8;
+        this.health = 8;
         this.color = 'red';
-        // Additional properties for shooting behavior can be added here
         break;
       default:
-        this.speed = 1.5;
-        this.health = 3;
+        this.speed = 0.8;
+        this.health = 5;
         this.color = 'green';
     }
   }
@@ -205,49 +219,7 @@ class Enemy extends GameObject {
     // Move towards player with speed based on type and player level
     this.x += (dx / dist) * this.speed * (1 + (player.level * 0.05));
     this.y += (dy / dist) * this.speed * (1 + (player.level * 0.05));
-
-    // Implement shooting behavior for Shooter type
-    if (this.type === EnemyType.Shooter && !gamePaused) {
-      // Example: Enemy shoots every 200 frames
-      // Implement shooting logic here
-    }
   }
-}
-
-// Modify spawnEnemy function to include random enemy types
-function spawnEnemy() {
-  const edge = Math.floor(Math.random() * 4);
-  let x: number = 0, y: number = 0;
-
-  switch (edge) {
-      case 0: // Top
-          x = Math.random() * canvas.width;
-          y = -20;
-          break;
-      case 1: // Right
-          x = canvas.width + 20;
-          y = Math.random() * canvas.height;
-          break;
-      case 2: // Bottom
-          x = Math.random() * canvas.width;
-          y = canvas.height + 20;
-          break;
-      case 3: // Left
-          x = -20;
-          y = Math.random() * canvas.height;
-          break;
-  }
-
-  enemies.push(new Enemy(x, y, getRandomEnemyType()));
-
-  // 10% chance to spawn a power-up instead of an enemy
-  if (Math.random() < 0.1) {
-      spawnPowerUp(x, y);
-  }
-}
-
-function getRandomEnemyType(): EnemyType {
-  return Math.floor(Math.random() * Object.keys(EnemyType).length);
 }
 
 // Bullet Class
@@ -298,7 +270,7 @@ class Bullet extends GameObject {
           enemies.splice(enemies.indexOf(this.target), 1);
           spawnGem(this.target.x, this.target.y);
           score += 10; // Increment score
-          console.log(`Enemy defeated! Score: ${score}`);
+          updateScoreDisplay(); // Update score display
         }
       }
     } else {
@@ -329,7 +301,7 @@ class Gem extends GameObject {
 
   constructor(x: number, y: number) {
     super(x, y, 10, 'yellow'); // Gem color
-    this.speed = 2; // Maintains collectability
+    this.speed = 3; // Maintains collectability
   }
 
   update() {
@@ -344,11 +316,10 @@ class Gem extends GameObject {
       this.x += (dx / dist) * this.speed;
       this.y += (dy / dist) * this.speed;
     }
-
-    updateScoreDisplay();
   }
 }
 
+// Power-Up Class
 enum PowerUpType {
   SpeedBoost,
   RapidFire,
@@ -398,6 +369,67 @@ class PowerUp extends GameObject {
   }
 }
 
+// Initialize Player and Game Arrays
+let player = new Player(canvas.width / 2 - 10, canvas.height / 2 - 10); // Adjusted position
+let enemies: Enemy[] = [];
+let bullets: Bullet[] = [];
+let gems: Gem[] = [];
+let powerUps: PowerUp[] = []; // Array for power-ups
+
+// Enemy Spawn Configuration
+let enemySpawnInterval = 2000; // Initial interval in milliseconds
+let timeSinceLastSpawn = 0;
+
+// Function to Spawn Enemies from Random Edges
+function spawnEnemy() {
+  const edge = Math.floor(Math.random() * 4);
+  let x: number = 0, y: number = 0;
+
+  switch (edge) {
+    case 0: // Top
+      x = Math.random() * canvas.width;
+      y = -20;
+      break;
+    case 1: // Right
+      x = canvas.width + 20;
+      y = Math.random() * canvas.height;
+      break;
+    case 2: // Bottom
+      x = Math.random() * canvas.width;
+      y = canvas.height + 20;
+      break;
+    case 3: // Left
+      x = -20;
+      y = Math.random() * canvas.height;
+      break;
+  }
+
+  // Randomly assign enemy type based on spawn probability
+  const rand = Math.random();
+  let type = EnemyType.Normal;
+  let cumulativeChance = 0;
+
+  for (const [enemyType, chance] of Object.entries(enemySpawnChances)) {
+    cumulativeChance += chance;
+    if (rand < cumulativeChance) {
+      type = Number(enemyType) as EnemyType;
+      break;
+    }
+  }
+
+  enemies.push(new Enemy(x, y, type));
+
+  // 10% chance to spawn a power-up instead of an enemy
+  if (Math.random() < 0.1) {
+    spawnPowerUp(x, y);
+  }
+}
+
+// Function to Spawn Gems
+function spawnGem(x: number, y: number) {
+  gems.push(new Gem(x, y));
+}
+
 // Function to Spawn Power-Ups
 function spawnPowerUp(x: number, y: number) {
   const rand = Math.random();
@@ -414,35 +446,6 @@ function spawnPowerUp(x: number, y: number) {
   powerUps.push(new PowerUp(x, y, type));
 }
 
-let powerUps: PowerUp[] = [];
-
-
-function updateScoreDisplay() {
-  // Assuming there's an HTML element with id 'scoreDisplay'
-  const scoreDisplay = document.getElementById('scoreDisplay') as HTMLDivElement;
-  if (scoreDisplay) {
-    scoreDisplay.textContent = `Score: ${score}`;
-  }
-}
-
-
-// Initialize Player and Game Arrays
-let player = new Player(canvas.width / 2 - 10, canvas.height / 2 - 10); // Adjusted position
-let enemies: Enemy[] = [];
-let bullets: Bullet[] = [];
-let gems: Gem[] = [];
-
-// Enemy Spawn Configuration
-let enemySpawnInterval = 2000; // Initial interval in milliseconds
-let timeSinceLastSpawn = 0;
-
-
-
-// Function to Spawn Gems
-function spawnGem(x: number, y: number) {
-  gems.push(new Gem(x, y));
-}
-
 // Function to Update XP Bar
 function updateXPBar() {
   const fillPercentage = (player.xp / player.xpToLevelUp) * 100;
@@ -452,6 +455,11 @@ function updateXPBar() {
 // Function to Update Level Display
 function updateLevelDisplay() {
   levelDisplay.textContent = `Level: ${player.level}`;
+}
+
+// Function to Update Score Display
+function updateScoreDisplay() {
+  scoreDisplay.textContent = `Score: ${score}`;
 }
 
 // Level Up Overlay Handling
@@ -502,10 +510,13 @@ function resetGame() {
   enemies = [];
   bullets = [];
   gems = [];
+  powerUps = []; // Reset power-ups
   enemySpawnInterval = 2000;
   timeSinceLastSpawn = 0;
+  score = 0; // Reset score
   updateXPBar();
   updateLevelDisplay();
+  updateScoreDisplay(); // Reset score display
   hideGameOverOverlay();
   hideLevelUpOverlay();
   gamePaused = false;
@@ -559,6 +570,18 @@ function update(timestamp: number) {
       bullet.draw();
     });
 
+    // Update and Draw Power-Ups
+    powerUps.forEach((powerUp) => {
+      powerUp.update();
+      powerUp.draw();
+
+      // Collision with Player
+      if (isColliding(player, powerUp)) {
+        powerUp.applyEffect(player);
+        powerUps.splice(powerUps.indexOf(powerUp), 1); // Remove power-up after collection
+      }
+    });
+
     // Draw Player Last to Ensure It's on Top
     player.draw();
 
@@ -582,6 +605,7 @@ function update(timestamp: number) {
 
   // Update Level Display
   updateLevelDisplay();
+  updateScoreDisplay(); // Update score display
 
   requestAnimationFrame(update);
 }
