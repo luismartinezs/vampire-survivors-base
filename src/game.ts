@@ -160,7 +160,7 @@ let gems: Gem[] = [];
 
 function spawnEnemy() {
   const edge = Math.floor(Math.random() * 4);
-  let x: number, y: number;
+  let x: number = 0, y: number = 0;
 
   // Spawn enemies at random edges
   switch (edge) {
