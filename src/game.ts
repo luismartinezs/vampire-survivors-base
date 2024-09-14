@@ -42,14 +42,14 @@ class Player extends GameObject {
 
   constructor(x: number, y: number) {
     super(x, y, 20, 'blue');
-    this.speed = 3;
+    this.speed = 1.5;
     this.level = 1;
     this.shootTimer = 0;
     this.attackSpeed = 60; // Frames between shots (lower is faster)
     this.attackPower = 1;
     this.xp = 0;
-    this.xpToLevelUp = 5;
-    this.collectRadius = 100;
+    this.xpToLevelUp = 10;
+    this.collectRadius = 30;
   }
 
   update() {
@@ -72,7 +72,7 @@ class Player extends GameObject {
           new Bullet(
             this.x + this.size / 2,
             this.y + this.size / 2,
-            5 + this.level,
+            1 + this.level,
             'red',
             nearestEnemy,
             this.attackPower
@@ -92,8 +92,9 @@ class Player extends GameObject {
     this.level++;
     this.xp = 0;
     this.xpToLevelUp += 5;
-    this.attackSpeed = Math.max(10, this.attackSpeed - 5); // Increase attack speed
+    this.attackSpeed = Math.max(10, this.attackSpeed - 3); // Increase attack speed
     this.attackPower += 1; // Increase attack power
+    this.collectRadius += 3;
     console.log(`Level Up! Level: ${this.level}`);
   }
 
@@ -212,12 +213,12 @@ let enemies: Enemy[] = [];
 let bullets: Bullet[] = [];
 let gems: Gem[] = [];
 
-let enemySpawnInterval = 2000; // Initial interval in milliseconds
+let enemySpawnInterval = 1200; // Initial interval in milliseconds
 let timeSinceLastSpawn = 0;
 
 function spawnEnemy() {
   const edge = Math.floor(Math.random() * 4);
-  let x: number, y: number;
+  let x: number = 0, y: number = 0;
 
   switch (edge) {
     case 0: // Top
